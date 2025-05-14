@@ -2,6 +2,8 @@
 
 This repository contains our model implementation (in model_libs/src_code) and training code (train.py).
 
+Paper: [UMoE: Unifying Attention and FFN with Shared Experts](https://arxiv.org/abs/2505.07260)
+
 ## Create Model
 
 We provide model configurations used in our paper. You can easily create these models as follows:
