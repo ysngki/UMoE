@@ -5,7 +5,7 @@ import multiprocessing
 import os
 
 import torch
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk, IterableDataset
 from transformers import (
     AutoModelForCausalLM,
     logging,
@@ -21,7 +21,7 @@ def get_args():
     parser.add_argument("--run_name", type=str, default="a_run")
     parser.add_argument("--config_name", type=str, default="required")
     parser.add_argument("--dataset_text_field", type=str, default="content")
-    parser.add_argument('--deepspeed', type=str, default="./deespeed_config.json")
+    parser.add_argument('--deepspeed', type=str, default=None)
 
     parser.add_argument("--max_steps", type=int, default=20000)
     parser.add_argument("--micro_batch_size", type=int, default=32)
@@ -75,9 +75,6 @@ def print_trainable_parameters(model):
 def main(args):
     assert args.global_batch_size == args.world_size * args.micro_batch_size * args.gradient_accumulation_steps
     
-    # os.environ["HF_DATASETS_CACHE"]=""
-    # os.environ['HF_HOME'] = ''
-    
     if args.disable_wandb:
         report_to = "none"
     else:
@@ -121,6 +118,45 @@ def main(args):
     print(model)
     print_trainable_parameters(model)
 
+    # training config
+    sft_config = SFTConfig(
+            per_device_train_batch_size=args.micro_batch_size,
+            gradient_accumulation_steps=args.gradient_accumulation_steps,
+            warmup_ratio=args.warmup_ratio,
+            max_steps=args.max_steps,
+            # num_train_epochs=1.0,
+            learning_rate=args.learning_rate,
+            lr_scheduler_type=args.lr_scheduler_type,
+            weight_decay=args.weight_decay,
+            bf16=args.bf16,
+            logging_strategy="steps",
+            logging_steps=args.logging_steps,
+            output_dir=os.path.join(args.output_dir, args.run_name),
+            optim="adamw_torch",
+            adam_beta2=0.95,
+            seed=args.seed,
+            run_name=f"{args.run_name}",
+            report_to=report_to,
+            # packing=True,
+            eval_packing=False,
+            save_steps=args.save_steps,
+            # save_steps=0.05,
+            save_total_limit=args.save_total_limit,
+            #########
+            eval_strategy="steps" if args.wikitext_103 else "no",
+            metric_for_best_model="loss",
+            eval_steps=args.save_steps,
+            eval_on_start=True if args.wikitext_103 else False,
+            load_best_model_at_end=True if args.wikitext_103 else False,
+            #########
+            dataset_text_field=args.dataset_text_field,
+            max_length=config.max_position_embeddings,
+            dataset_num_proc=args.num_proc if args.num_proc else multiprocessing.cpu_count(),
+            deepspeed=args.deepspeed,
+            ignore_data_skip=args.ignore_data_skip,
+            gradient_checkpointing=args.gradient_checkpointing,
+            # accelerator_config="accelerator_config.json",
+        )
 
     # load dataset
     cache_dir = os.environ.get("HF_DATASETS_CACHE", None)
@@ -142,6 +178,11 @@ def main(args):
             train_data = train_data.shuffle(seed=args.seed, buffer_size=args.global_batch_size * 64)
         else:
             print("Shuffle for Iter dataset is disabled. (Not important.)\n" + "*"*100)
+
+    print("Data Loaded!!")
+
+    if isinstance(train_data, IterableDataset):
+        sft_config.packing = True
 
     ################## for eval loss
     class MySFTTrainer(SFTTrainer):
@@ -172,42 +213,8 @@ def main(args):
         model=model,
         train_dataset=train_data,
         eval_dataset=eval_data,
-        tokenizer=tokenizer,
-        args=SFTConfig(
-            per_device_train_batch_size=args.micro_batch_size,
-            gradient_accumulation_steps=args.gradient_accumulation_steps,
-            warmup_ratio=args.warmup_ratio,
-            max_steps=args.max_steps,
-            learning_rate=args.learning_rate,
-            lr_scheduler_type=args.lr_scheduler_type,
-            weight_decay=args.weight_decay,
-            bf16=args.bf16,
-            logging_strategy="steps",
-            logging_steps=args.logging_steps,
-            output_dir=os.path.join(args.output_dir, args.run_name),
-            optim="adamw_torch",
-            adam_beta2=0.95,
-            seed=args.seed,
-            run_name=f"{args.run_name}",
-            report_to=report_to,
-            packing=True,
-            eval_packing=False,
-            save_steps=args.save_steps,
-            save_total_limit=args.save_total_limit,
-            #########
-            eval_strategy="steps" if args.wikitext_103 else "noe",
-            metric_for_best_model="loss",
-            eval_steps=args.save_steps,
-            eval_on_start=True if args.wikitext_103 else False,
-            load_best_model_at_end=True if args.wikitext_103 else False,
-            #########
-            dataset_text_field=args.dataset_text_field,
-            max_seq_length=config.max_position_embeddings,
-            dataset_num_proc=args.num_proc if args.num_proc else multiprocessing.cpu_count(),
-            deepspeed=args.deepspeed,
-            ignore_data_skip=args.ignore_data_skip,
-            gradient_checkpointing=args.gradient_checkpointing,
-        ),
+        processing_class=tokenizer,
+        args=sft_config,
     )
 
     # launch

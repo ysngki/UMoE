@@ -9,7 +9,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 ######################### create my model, you should replace all modules with their slow version
 bf16 = True
 
-config = AutoConfig.from_pretrained("../model_libs/configs/1B-ffnMoE-1024", trust_remote_code=True)
+config = AutoConfig.from_pretrained("../model_libs/configs/small-vanilla-ffnMoE-1024", trust_remote_code=True)
 tokenizer = AutoTokenizer.from_pretrained("../llama2_tokenizer")
 
 config.vocab_size += 1
@@ -20,6 +20,8 @@ if bf16:
     model = AutoModelForCausalLM.from_config(config, trust_remote_code=True, torch_dtype=torch.bfloat16)
 else:
     model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
+device = 'cuda'
+model.to(device)
 
 #########################
 def input_constructor(batch_size, seq_len, tokenizer):
@@ -30,13 +32,15 @@ def input_constructor(batch_size, seq_len, tokenizer):
                        padding=True,
                        truncation=True,
                        return_tensors="pt")
-    inputs = dict(inputs)
+    inputs['input_ids'] = inputs['input_ids'].to(device)
+    inputs['attention_mask'] = inputs['attention_mask'].to(device)
+
     # labels = torch.tensor([1] * batch_size)
     # inputs.update({"labels": labels})
     return inputs
 
 
-with get_accelerator().device(7):
+with get_accelerator().device(0):
     batch_size = 4
     seq_len = 1024
     enable_profile = True

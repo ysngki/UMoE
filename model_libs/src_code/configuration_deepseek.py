@@ -206,6 +206,14 @@ class DeepseekV2Config(PretrainedConfig):
         skip_shared_ffn=False,
         no_act=False,
         postmix_att_moe=False,
+        mla=False,
+        latent_size=None,
+        swiglue_mlp=False,
+        use_megatron_cutlass_group_gemm=False,
+        use_unsloth_moe=True,
+        use_te_group_linear=False,
+        gpt_premix=False,
+        gpt_postmix=False,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -268,6 +276,15 @@ class DeepseekV2Config(PretrainedConfig):
         self.skip_shared_ffn = skip_shared_ffn
         self.no_act = no_act
         self.postmix_att_moe = postmix_att_moe
+        self.mla = mla
+        self.latent_size = latent_size
+        self.swiglue_mlp = swiglue_mlp
+        self.use_megatron_cutlass_group_gemm = use_megatron_cutlass_group_gemm
+        self.use_te_group_linear = use_te_group_linear
+        self.use_unsloth_moe = use_unsloth_moe
+
+        self.gpt_premix = gpt_premix
+        self.gpt_postmix = gpt_postmix
 
         super().__init__(
             pad_token_id=pad_token_id,
