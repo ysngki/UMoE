@@ -42,6 +42,8 @@ To accelerate training, you'll need a Grouped GEMM implementation. Three options
 
     Enable with: ```'use_megatron_cutlass_group_gemm': true``` in the model config.
 
+   Version v1.1.4 (released on July 11, 2024) is used when developing the model.
+
 - [Unsloth](https://github.com/unslothai/unsloth): 
 
     ```bash
@@ -50,6 +52,8 @@ To accelerate training, you'll need a Grouped GEMM implementation. Three options
     ```
 
     Enable with: ```'use_unsloth_moe': true``` in the model config.
+
+    triton==3.3x and pytorch 2.7x is required for unsloth moe
 
 - [TransformerEngine](https://github.com/NVIDIA/TransformerEngine)
 
