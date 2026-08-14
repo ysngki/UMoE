@@ -1,3 +1,6 @@
+
+</think>
+
 <!-- <div align="center">
   <p>
     <img width="100" alt="logo" src="images/logo.png" style="vertical-align: middle;" />
@@ -70,6 +73,7 @@ from transformers import (
     AutoModelForCausalLM,
     AutoConfig,
 )
+import os
 
 config = '1B-UMoE-1024'
 
