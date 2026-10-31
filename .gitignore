@@ -1,0 +1,23 @@
+# Licensed / downloaded assets
+llama2_tokenizer/
+fineweb_edu_100bt/
+
+# Data, checkpoints, logs, envs
+data/
+ckpt/
+output/
+logs/
+wandb/
+envs/
+*.pt
+*.safetensors
+*.parquet
+
+# Python and editor clutter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.vscode/
+
+# Secrets
+.env
